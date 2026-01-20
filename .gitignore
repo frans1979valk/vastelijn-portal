@@ -1,0 +1,29 @@
+# Environment
+.env
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# Data files (contain secrets/local data)
+data/portal.db
+data/apk/*.apk
+data/config.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.log
