@@ -27,3 +27,11 @@ class Device(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     owner = relationship("User", back_populates="devices")
+
+
+class DownloadLog(Base):
+    __tablename__ = "download_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    ip_address = Column(String, nullable=True)
+    user_agent = Column(String, nullable=True)
+    downloaded_at = Column(DateTime, default=datetime.utcnow)

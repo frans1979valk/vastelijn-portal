@@ -183,8 +183,10 @@ function loginView() {
 // ============ ADMIN PAGINA ============
 async function adminView() {
   let config = {};
+  let stats = { total_downloads: 0, today_downloads: 0, week_downloads: 0, recent_downloads: [] };
   try {
     config = await api("/api/admin/config");
+    stats = await api("/api/admin/stats");
   } catch (e) {
     if (e.message.includes("401") || e.message.includes("Not authenticated")) {
       clearToken();
@@ -258,6 +260,35 @@ async function adminView() {
             <span class="status-value ${config.apk_url && config.checksum ? 'ok' : 'missing'}">${config.apk_url && config.checksum ? 'Ja' : 'Nee'}</span>
           </div>
         </div>
+      </div>
+
+      <div class="card">
+        <h2>Download Statistieken</h2>
+        <div class="status-grid">
+          <div class="status-item">
+            <span class="status-label">Totaal downloads:</span>
+            <span class="status-value ok" style="font-size:1.2em;font-weight:bold">${stats.total_downloads}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Vandaag:</span>
+            <span class="status-value">${stats.today_downloads}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Afgelopen 7 dagen:</span>
+            <span class="status-value">${stats.week_downloads}</span>
+          </div>
+        </div>
+        ${stats.recent_downloads.length > 0 ? `
+          <h3 style="margin-top:16px;font-size:0.95em">Recente downloads</h3>
+          <div class="recent-downloads">
+            ${stats.recent_downloads.map(d => `
+              <div class="download-entry">
+                <span class="small">${new Date(d.downloaded_at).toLocaleString('nl-NL')}</span>
+                <span class="small" style="color:#888">${d.ip_address || 'Onbekend IP'}</span>
+              </div>
+            `).join('')}
+          </div>
+        ` : '<p class="small">Nog geen downloads</p>'}
       </div>
     </div>
   `);

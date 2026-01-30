@@ -218,6 +218,26 @@ code {
   color: #ff9800;
 }
 
+/* Recent Downloads */
+.recent-downloads {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #22304f;
+  border-radius: 10px;
+  background: #0b1324;
+}
+
+.download-entry {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid #22304f;
+}
+
+.download-entry:last-child {
+  border-bottom: none;
+}
+
 /* Responsive */
 @media (max-width: 600px) {
   .container {

@@ -1,10 +1,11 @@
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import text
+from sqlalchemy import text, func
 from pydantic import BaseModel, EmailStr
 from typing import Optional
+from datetime import datetime, timedelta
 import os
 import hashlib
 import base64
@@ -15,7 +16,7 @@ from .db import Base, engine, get_db
 from .settings import APP_NAME
 from .crud import create_user, authenticate
 from .auth import create_token, get_current_user
-from .models import User
+from .models import User, DownloadLog
 
 Base.metadata.create_all(bind=engine)
 
@@ -136,7 +137,7 @@ def get_provisioning():
 
 
 @app.get("/api/public/apk")
-def download_apk():
+def download_apk(request: Request, db: Session = Depends(get_db)):
     """Publiek endpoint - Download de APK"""
     config = load_config()
     if not config.get("apk_filename"):
@@ -145,6 +146,14 @@ def download_apk():
     apk_path = os.path.join(APK_DIR, config["apk_filename"])
     if not os.path.exists(apk_path):
         raise HTTPException(404, "APK bestand niet gevonden")
+
+    # Log de download
+    log_entry = DownloadLog(
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent", "")[:500],
+    )
+    db.add(log_entry)
+    db.commit()
 
     return FileResponse(
         apk_path,
@@ -274,3 +283,38 @@ def delete_apk(user: User = Depends(get_current_user)):
     save_config(config)
 
     return {"message": "APK verwijderd"}
+
+
+@app.get("/api/admin/stats")
+def get_stats(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Admin: Haal download statistieken op"""
+    now = datetime.utcnow()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_start = today_start - timedelta(days=7)
+
+    total_downloads = db.query(func.count(DownloadLog.id)).scalar() or 0
+    today_downloads = db.query(func.count(DownloadLog.id)).filter(
+        DownloadLog.downloaded_at >= today_start
+    ).scalar() or 0
+    week_downloads = db.query(func.count(DownloadLog.id)).filter(
+        DownloadLog.downloaded_at >= week_start
+    ).scalar() or 0
+
+    # Laatste 10 downloads
+    recent = db.query(DownloadLog).order_by(
+        DownloadLog.downloaded_at.desc()
+    ).limit(10).all()
+
+    return {
+        "total_downloads": total_downloads,
+        "today_downloads": today_downloads,
+        "week_downloads": week_downloads,
+        "recent_downloads": [
+            {
+                "id": r.id,
+                "ip_address": r.ip_address,
+                "downloaded_at": r.downloaded_at.isoformat() if r.downloaded_at else None,
+            }
+            for r in recent
+        ],
+    }
